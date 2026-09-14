@@ -11,7 +11,6 @@
 //
 //============================================================================
 
-
 module emu
 (
 	//Master input clock
@@ -22,7 +21,7 @@ module emu
 	input         RESET,
 
 	//Must be passed to hps_io module
-	inout  [48:0] HPS_BUS,
+	inout  [45:0] HPS_BUS,
 
 	//Base video clock. Usually equals to CLK_SYS.
 	output        CLK_VIDEO,
@@ -248,7 +247,7 @@ wire [21:0] gamma_bus;
 // [MiSTer-DB9 BEGIN] - DB9/SNAC8 support: joydb wrapper
 wire         CLK_JOY = CLK_50M;                 // Assign clock between 40-50Mhz
 wire   [1:0] joy_type_raw    = status[127:126]; // 0=Off, 1=Saturn, 2=DB9MD, 3=DB15
-wire         joy_2p          = status[125];
+wire         joy_2p          = 1'b0;          // 1P-only: joy_2p unused
 // SNAC cores: replace 1'b0 with the core's SNAC enable expression so SNAC
 // preempts the joydb wrapper on shared USER_IO pins. Default 1'b0 is no-op.
 wire         snac_active     = 1'b0;
@@ -343,6 +342,7 @@ end
 // AR:                            XX    (bits 30:29)
 // OR:   X                              (bit 2)
 // SD:    XXX                           (bits 5:3)
+// FL:       X                          (bit 6) - Flip screen
 // FQ:                              X   (bit 31) - Frequency select
 // HS:                           X      (bit 28)
 // PA:                      XX          (bits 26:25)
@@ -352,6 +352,7 @@ localparam CONF_STR = {
 	"A.SLAPFIGHT;;",
 	"OTU,Aspect ratio,Original,Full Screen;",
 	"O2,Orientation,Vert,Horz;",
+	"O6,Flip,Off,On;",
 	"O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
 	"OV,Frequency,Original,60Hz (Overclock);",
 	"-;",
@@ -577,7 +578,8 @@ wire [11:0] rgb = {rgb_out[11:8], rgb_out[7:4], rgb_out[3:0]};
 
 wire no_rotate = status[2] | direct_video;
 wire rotate_ccw = 0;
-wire flip = 0;
+wire flip = 1'b0;
+wire core_flip = status[6];
 
 screen_rotate screen_rotate (.*);
 
@@ -654,6 +656,7 @@ slapfight_fpga slapcore
 (
 	.clkm_48MHZ(clk_sys),
 	.pcb(mod_other),
+	.flip(core_flip),
 	.RED(r),
 	.GREEN(g),
 	.BLUE(b),
